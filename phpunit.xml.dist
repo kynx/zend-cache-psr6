@@ -1,0 +1,19 @@
+<phpunit bootstrap="./vendor/autoload.php" colors="true">
+    <testsuites>
+        <testsuite name="Zend Cache PSR-6 Tests">
+            <directory>./test</directory>
+        </testsuite>
+    </testsuites>
+
+
+
+    <filter>
+        <whitelist processUncoveredFilesFromWhitelist="true">
+            <directory suffix=".php">src/</directory>
+        </whitelist>
+    </filter>
+
+    <php>
+        <ini name="date.timezone" value="UTC" />
+    </php>
+</phpunit>
