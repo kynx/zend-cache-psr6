@@ -2,6 +2,7 @@
     "name": "kynx/zend-cache-psr6",
     "description": "PSR-6 adapter for Zend Cache",
     "minimum-stability": "dev",
+    "prefer-stable": true,
     "license": "BSD-3-Clause",
     "authors": [
         {
