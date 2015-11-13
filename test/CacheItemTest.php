@@ -31,7 +31,8 @@ class CacheItemTest extends TestCase
     public function testSet()
     {
         $item = new CacheItem('key', 'value', true);
-        $item->set('value2');
+        $return = $item->set('value2');
+        $this->assertEquals($item, $return);
         $this->assertEquals('value2', $item->get());
     }
 
@@ -39,21 +40,26 @@ class CacheItemTest extends TestCase
     {
         $item = new CacheItem('key', 'value', true);
         $dateTime = new DateTime();
-        $item->expiresAt($dateTime);
+        $return = $item->expiresAt($dateTime);
+        $this->assertEquals($item, $return);
         $this->assertEquals($dateTime, $item->getExpiration());
     }
 
     public function testExpireAtNull()
     {
         $item = new CacheItem('key', 'value', true);
-        $item->expiresAt(null);
+        $return = $item->expiresAt(null);
+        $this->assertEquals($item, $return);
+
         $this->assertNull($item->getExpiration());
     }
 
     public function testExpiresAfterInt()
     {
         $item = new CacheItem('key', 'value', true);
-        $item->expiresAfter(3600);
+        $return = $item->expiresAfter(3600);
+        $this->assertEquals($item, $return);
+
         $expiration = $item->getExpiration();
         $this->assertNotNull($expiration);
         /* @var DateTime $expiration */
@@ -66,12 +72,23 @@ class CacheItemTest extends TestCase
     {
         $item = new CacheItem('key', 'value', true);
         $interval = new \DateInterval('PT1H');
-        $item->expiresAfter($interval);
+        $return = $item->expiresAfter($interval);
+        $this->assertEquals($item, $return);
+
         $expiration = $item->getExpiration();
         $this->assertNotNull($expiration);
         /* @var DateTime $expiration */
         $interval = $expiration->diff(new DateTime(), true);
         // check range in case test is running slowly...
         $this->assertEquals(1, $interval->h);
+    }
+
+    /**
+     * @expectedException \Kynx\ZendCache\Psr\InvalidArgumentException
+     */
+    public function testExpiresAfterInvalid()
+    {
+        $item = new CacheItem('key', 'value', true);
+        $item->expiresAfter([]);
     }
 }

@@ -74,7 +74,7 @@ class CacheItemPoolAdapter implements CacheItemPoolInterface
      *   key is not found. However, if no keys are specified then an empty
      *   traversable MUST be returned instead.
      */
-    public function getItems(array $keys = array())
+    public function getItems(array $keys = [])
     {
         $this->validateKeys($keys);
         try {
@@ -152,6 +152,8 @@ class CacheItemPoolAdapter implements CacheItemPoolInterface
                 $cleared = $this->storage->clearByNamespace($namespace);
             } elseif ($this->storage instanceof FlushableInterface) {
                 $cleared = $this->storage->flush();
+            } else {
+                throw new CacheException(sprintf("Storage %s does not support clear()", get_class($this->storage)));
             }
         } catch (Exception\InvalidArgumentException $e) {
             throw new InvalidArgumentException($e->getMessage(), $e->getCode(), $e);
@@ -211,7 +213,7 @@ class CacheItemPoolAdapter implements CacheItemPoolInterface
         $this->validateKeys($keys);
 
         try {
-            $deleted = $this->storage->removeItems($keys);
+            $notDeleted = $this->storage->removeItems($keys);
 
         } catch (Exception\InvalidArgumentException $e) {
             throw new InvalidArgumentException($e->getMessage(), $e->getCode(), $e);
@@ -220,7 +222,8 @@ class CacheItemPoolAdapter implements CacheItemPoolInterface
             throw new CacheException($e->getMessage(), $e->getCode(), $e);
         }
 
-        return empty($deleted);
+        // @todo Is it an "error" if one of the keys does not exist??
+        return empty($notDeleted);
     }
 
     /**
@@ -244,8 +247,8 @@ class CacheItemPoolAdapter implements CacheItemPoolInterface
             $options = false;
             $expiration = $item->getExpiration();
 
-            // I can't see any way to set the TTL on an individual item except by temporarily overwriting the option
-            // on the storage adapter. Not sure if all storage adapters will support this...
+            // @todo I can't see any way to set the TTL on an individual item except by temporarily overwriting the
+            //       option on the storage adapter. Not sure if all storage adapters will support this...
             if ($expiration instanceof DateTime) {
                 $options = $this->storage->getOptions();
                 $new = clone $options;
@@ -305,9 +308,6 @@ class CacheItemPoolAdapter implements CacheItemPoolInterface
 
     private function validateKeys($keys)
     {
-        if (!is_array($keys)) {
-            throw new InvalidArgumentException(sprintf("Keys must be an array, '%s' given", gettype($keys)));
-        }
         foreach ($keys as $key) {
             $this->validateKey($key);
         }

@@ -90,6 +90,7 @@ final class CacheItem implements CacheItemInterface
     public function set($value)
     {
         $this->value = $value;
+        return $this;
     }
 
     /**
@@ -107,6 +108,7 @@ final class CacheItem implements CacheItemInterface
     public function expiresAt($expiration = null)
     {
         $this->expiration = $expiration;
+        return $this;
     }
 
     /**
@@ -129,11 +131,12 @@ final class CacheItem implements CacheItemInterface
         } elseif ((int) $time == $time) {
             $interval = new DateInterval('PT' . $time . 'S');
         } else {
-            throw new InvalidArgumentException(sprintf('Invalid $time "%s"', $time));
+            throw new InvalidArgumentException(sprintf('Invalid $time "%s"', gettype($time)));
         }
 
         $this->expiration = new \DateTime();
         $this->expiration->add($interval);
+        return $this;
     }
 
     /**

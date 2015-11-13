@@ -19,4 +19,5 @@
     <file>src</file>
     <file>test</file>
     <exclude-pattern>test/coverage/*</exclude-pattern>
+    <exclude-pattern>src/Spec/*</exclude-pattern>
 </ruleset>

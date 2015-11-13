@@ -12,7 +12,9 @@ use Kynx\ZendCache\Psr\Spec\CacheItemInterface;
 use PHPUnit_Framework_TestCase as TestCase;
 use Prophecy\Argument;
 use Zend\Cache\Exception;
+use Zend\Cache\Storage\Adapter\AdapterOptions;
 use Zend\Cache\Storage\Adapter\Filesystem;
+use Zend\Cache\Storage\Adapter\Memcache;
 use Zend\Cache\Storage\StorageInterface;
 
 class CacheItemPoolAdapterTest extends TestCase
@@ -152,6 +154,17 @@ class CacheItemPoolAdapterTest extends TestCase
         $this->assertTrue($saved->isHit());
     }
 
+    public function testSaveItemWithExpiration()
+    {
+        $item = $this->adapter->getItem('foo');
+        $item->set('bar');
+        $item->expiresAfter(3600);
+        $this->adapter->save($item);
+        $saved = $this->adapter->getItem('foo');
+        $this->assertEquals('bar', $saved->get());
+        $this->assertTrue($saved->isHit());
+    }
+
     /**
      * @expectedException \Kynx\ZendCache\Psr\InvalidArgumentException
      */
@@ -244,35 +257,104 @@ class CacheItemPoolAdapterTest extends TestCase
         $adapter->hasItem('foo');
     }
 
-    public function testClearEmpty()
-    {
-        $this->adapter->clear();
-        $item = $this->adapter->getItem('foo');
-        $this->assertEquals('foo', $item->getKey());
-        $this->assertNull($item->get());
-        $this->assertFalse($item->isHit());
-    }
-
     public function testClear()
     {
         $item = $this->adapter->getItem('foo');
         $item->set('bar');
         $this->adapter->save($item);
 
-        $this->adapter->clear();
-
-        $saved = $this->adapter->getItem('foo');
-        $this->assertNull($saved->get());
-        $this->assertFalse($saved->isHit());
+        $this->assertTrue($this->adapter->clear());
     }
 
+
+    public function testClearEmpty()
+    {
+        $this->assertTrue($this->adapter->clear());
+    }
+
+    /**
+     * @expectedException \Kynx\ZendCache\Psr\CacheException
+     */
+    public function testClearCacheByNamespaceException()
+    {
+        $prophesy = $this->prophesize(Filesystem::class);
+        $options = $this->prophesize(AdapterOptions::class);
+        $options->getNamespace()->willReturn('foo');
+        $prophesy->getOptions()->willReturn($options->reveal());
+        $prophesy->clearByNamespace(Argument::any())->will(function () {
+            throw new Exception\RuntimeException("thrown");
+        });
+        $adapter = new CacheItemPoolAdapter($prophesy->reveal());
+        $adapter->clear();
+    }
+
+    /**
+     * @expectedException \Kynx\ZendCache\Psr\InvalidArgumentException
+     */
+    public function testClearCacheByNamespaceInvalidArgumentException()
+    {
+        $prophesy = $this->prophesize(Filesystem::class);
+        $options = $this->prophesize(AdapterOptions::class);
+        $options->getNamespace()->willReturn('foo');
+        $prophesy->getOptions()->willReturn($options->reveal());
+        $prophesy->clearByNamespace(Argument::any())->will(function () {
+            throw new Exception\InvalidArgumentException("thrown");
+        });
+        $adapter = new CacheItemPoolAdapter($prophesy->reveal());
+        $adapter->clear();
+    }
+
+    /**
+     * @expectedException \Kynx\ZendCache\Psr\CacheException
+     */
+    public function testClearFlushException()
+    {
+        $prophesy = $this->prophesize(Memcache::class);
+        $options = $this->prophesize(AdapterOptions::class);
+        $options->getNamespace()->willReturn(false);
+        $prophesy->getOptions()->willReturn($options->reveal());
+        $prophesy->flush()->will(function () {
+            throw new Exception\RuntimeException("thrown");
+        });
+        $adapter = new CacheItemPoolAdapter($prophesy->reveal());
+        $adapter->clear();
+    }
+
+    /**
+     * @expectedException \Kynx\ZendCache\Psr\InvalidArgumentException
+     */
+    public function testClearFlushInvalidArgumentException()
+    {
+        $prophesy = $this->prophesize(Memcache::class);
+        $options = $this->prophesize(AdapterOptions::class);
+        $options->getNamespace()->willReturn(false);
+        $prophesy->getOptions()->willReturn($options->reveal());
+        $prophesy->flush()->will(function () {
+            throw new Exception\InvalidArgumentException("thrown");
+        });
+        $adapter = new CacheItemPoolAdapter($prophesy->reveal());
+        $adapter->clear();
+    }
+
+    /**
+     * @expectedException \Kynx\ZendCache\Psr\CacheException
+     */
+    public function testClearNotSupported()
+    {
+        $prophesy = $this->getStorageProphesy();
+        $options = $this->prophesize(AdapterOptions::class);
+        $options->getNamespace()->willReturn(false);
+        $prophesy->getOptions()->willReturn($options->reveal());
+        $adapter = new CacheItemPoolAdapter($prophesy->reveal());
+        $adapter->clear();
+    }
+
+    /**
+     * @todo It isn't clear from PSR-6 whether deleting non-existent keys should return false
+     */
     public function testDeleteNonexistentItem()
     {
-        $this->adapter->deleteItem('foo');
-        $item = $this->adapter->getItem('foo');
-        $this->assertEquals('foo', $item->getKey());
-        $this->assertNull($item->get());
-        $this->assertFalse($item->isHit());
+        $this->assertFalse($this->adapter->deleteItem('foo'));
     }
 
     public function testDeleteItem()
@@ -283,7 +365,7 @@ class CacheItemPoolAdapterTest extends TestCase
         $this->adapter->save($items['foo']);
         $this->adapter->save($items['bar']);
 
-        $this->adapter->deleteItem('bar');
+        $this->assertTrue($this->adapter->deleteItem('bar'));
 
         $items = $this->adapter->getItems(['foo', 'bar']);
         $this->assertEquals('value1', $items['foo']->get());
@@ -300,6 +382,43 @@ class CacheItemPoolAdapterTest extends TestCase
         $this->adapter->deleteItem([]);
     }
 
+    /**
+     * @expectedException \Kynx\ZendCache\Psr\CacheException
+     */
+    public function testDeleteItemCacheException()
+    {
+        $prophesy = $this->getStorageProphesy();
+        $prophesy->removeItem(Argument::any())->will(function () {
+            throw new Exception\RuntimeException("thrown");
+        });
+        $adapter = new CacheItemPoolAdapter($prophesy->reveal());
+        $adapter->deleteItem('foo');
+    }
+
+    /**
+     * @expectedException \Kynx\ZendCache\Psr\InvalidArgumentException
+     */
+    public function testDeleteItemInvalidArgumentException()
+    {
+        $prophesy = $this->getStorageProphesy();
+        $prophesy->removeItem(Argument::any())->will(function () {
+            throw new Exception\InvalidArgumentException("thrown");
+        });
+        $adapter = new CacheItemPoolAdapter($prophesy->reveal());
+        $adapter->deleteItem('foo');
+    }
+
+    /**
+     * @todo It isn't clear from PSR-6 whether deleting non-existent keys should return false
+     */
+    public function testDeleteNonexistentItems()
+    {
+        $this->assertFalse($this->adapter->deleteItems(['foo', 'foo2', 'baz']));
+    }
+
+    /**
+     * @todo It isn't clear from PSR-6 whether deleting non-existent keys should return false
+     */
     public function testDeleteItems()
     {
 
@@ -311,7 +430,7 @@ class CacheItemPoolAdapterTest extends TestCase
         $this->adapter->save($items['bar']);
         $this->adapter->save($items['baz']);
 
-        $this->adapter->deleteItems(['foo', 'foo2', 'baz']);
+        $this->assertFalse($this->adapter->deleteItems(['foo', 'foo2', 'baz']));
 
         $items = $this->adapter->getItems(['foo', 'bar', 'baz']);
         $this->assertFalse($items['foo']->isHit());
@@ -325,6 +444,47 @@ class CacheItemPoolAdapterTest extends TestCase
     public function testDeleteItemsInvalidKey()
     {
         $this->adapter->deleteItems(['foo', []]);
+    }
+
+    /**
+     * @expectedException \Kynx\ZendCache\Psr\CacheException
+     */
+    public function testDeleteItemsCacheException()
+    {
+        $prophesy = $this->getStorageProphesy();
+        $prophesy->removeItems(Argument::any())->will(function () {
+            throw new Exception\RuntimeException("thrown");
+        });
+        $adapter = new CacheItemPoolAdapter($prophesy->reveal());
+        $adapter->deleteItems(['foo', 'foo2', 'baz']);
+    }
+
+    /**
+     * @expectedException \Kynx\ZendCache\Psr\InvalidArgumentException
+     */
+    public function testDeleteItemsInvalidArgumentException()
+    {
+        $prophesy = $this->getStorageProphesy();
+        $prophesy->removeItems(Argument::any())->will(function () {
+            throw new Exception\InvalidArgumentException("thrown");
+        });
+        $adapter = new CacheItemPoolAdapter($prophesy->reveal());
+        $adapter->deleteItems(['foo', 'foo2', 'baz']);
+    }
+
+    public function testSaveDeferred()
+    {
+        $item = $this->adapter->getItem('foo');
+        $item->set('bar');
+        $this->adapter->saveDeferred($item);
+        $saved = $this->adapter->getItem('foo');
+        $this->assertEquals('bar', $saved->get());
+        $this->assertTrue($saved->isHit());
+    }
+
+    public function testCommit()
+    {
+        $this->assertTrue($this->adapter->commit());
     }
 
     private function getStorageProphesy()
