@@ -22,6 +22,7 @@
     },
     "require": {
         "php" : ">=5.5",
+        "psr/cache": "^1.0",
         "zendframework/zend-cache": "dev-develop",
         "zendframework/zend-servicemanager": "dev-develop as 2.7"
     },

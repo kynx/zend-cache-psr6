@@ -4,7 +4,7 @@
 
 namespace Kynx\ZendCache\Psr;
 
-use Kynx\ZendCache\Psr\Spec\CacheItemInterface;
+use Psr\Cache\CacheItemInterface;
 use DateInterval;
 
 final class CacheItem implements CacheItemInterface

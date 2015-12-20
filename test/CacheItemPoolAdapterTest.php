@@ -8,9 +8,9 @@ namespace KynxTest\ZendCache\Psr;
 
 use Kynx\ZendCache\Psr\CacheItem;
 use Kynx\ZendCache\Psr\CacheItemPoolAdapter;
-use Kynx\ZendCache\Psr\Spec\CacheItemInterface;
 use PHPUnit_Framework_TestCase as TestCase;
 use Prophecy\Argument;
+use Psr\Cache\CacheItemInterface;
 use Zend\Cache\Exception;
 use Zend\Cache\Storage\Adapter\AdapterOptions;
 use Zend\Cache\Storage\Adapter\Filesystem;

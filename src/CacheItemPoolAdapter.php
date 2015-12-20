@@ -6,8 +6,8 @@
 
 namespace Kynx\ZendCache\Psr;
 
-use Kynx\ZendCache\Psr\Spec\CacheItemInterface;
-use Kynx\ZendCache\Psr\Spec\CacheItemPoolInterface;
+use Psr\Cache\CacheItemInterface;
+use Psr\Cache\CacheItemPoolInterface;
 use Zend\Cache\Exception;
 use Zend\Cache\Storage\ClearByNamespaceInterface;
 use Zend\Cache\Storage\FlushableInterface;
